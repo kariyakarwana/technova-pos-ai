@@ -60,7 +60,7 @@ class MultiHorizonForecastRequest(BaseModel):
     product_id: str = Field(min_length=1)
     start_date: date
     forecast_days: int = Field(default=365, ge=30, le=730)
-    recent_daily_demand: list[float] = Field(min_length=28, max_length=365)
+    recent_daily_demand: list[float] = Field(min_length=7, max_length=365)
     current_stock: float = Field(ge=0)
     lead_time_days: int = Field(default=7, ge=1, le=180)
     review_period_days: int = Field(default=14, ge=1, le=365)
@@ -116,10 +116,29 @@ class MultiHorizonForecastSummary(BaseModel):
     peak_daily_demand: float
 
 
+class DirectHorizonForecast(BaseModel):
+    horizon_days: int
+    predicted_demand: float
+    lower_bound: float
+    upper_bound: float
+    interval_level: float
+    method: str
+
+
+class ForecastDataReadiness(BaseModel):
+    history_days: int
+    maturity: str
+    confidence: str
+    production_ready: bool
+    recommended_action: str
+
+
 class MultiHorizonForecastResponse(BaseModel):
     product_id: str
     summary: MultiHorizonForecastSummary
     stock_plan: MultiHorizonStockPlan
+    direct_horizons: list[DirectHorizonForecast]
+    data_readiness: ForecastDataReadiness
     daily: list[DailyDemandForecast]
     weekly: list[AggregatedDemandForecast]
     monthly: list[AggregatedDemandForecast]

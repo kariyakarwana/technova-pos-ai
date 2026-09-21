@@ -17,6 +17,103 @@ class DailyPoint(TypedDict):
     predicted_demand: float
 
 
+def _pad_history(values: list[float], minimum: int = 28) -> list[float]:
+    history = [float(value) for value in values]
+    if len(history) >= minimum:
+        return history
+    repeats = (minimum + len(history) - 1) // len(history)
+    return (history * repeats)[-minimum:]
+
+
+def _data_readiness(history_days: int) -> dict[str, Any]:
+    if history_days < 28:
+        return {
+            "history_days": history_days,
+            "maturity": "cold_start",
+            "confidence": "low",
+            "production_ready": False,
+            "recommended_action": "Collect at least 28 daily observations and require review.",
+        }
+    if history_days < 90:
+        return {
+            "history_days": history_days,
+            "maturity": "limited_history",
+            "confidence": "low",
+            "production_ready": False,
+            "recommended_action": "Refresh daily and keep purchase approval manual.",
+        }
+    if history_days < 365:
+        return {
+            "history_days": history_days,
+            "maturity": "developing",
+            "confidence": "medium",
+            "production_ready": False,
+            "recommended_action": "Continue collecting local seasonal and promotion history.",
+        }
+    return {
+        "history_days": history_days,
+        "maturity": "annual_history_available",
+        "confidence": "medium",
+        "production_ready": False,
+        "recommended_action": "Retrain and backtest on TechNova data before production approval.",
+    }
+
+
+def _direct_horizon_forecasts(
+    recent_daily_demand: list[float], service_level: float
+) -> list[dict[str, float | int | str]]:
+    window = np.asarray(recent_daily_demand[-28:], dtype=float)
+    mean_demand = float(window.mean())
+    standard_deviation = float(window.std(ddof=1)) if len(window) > 1 else 0.0
+    z_score = NormalDist().inv_cdf(service_level)
+    minimum_interval_rate = 0.30 if len(recent_daily_demand) < 90 else 0.20
+    forecasts: list[dict[str, float | int | str]] = []
+    for horizon in (7, 14, 30):
+        point = mean_demand * horizon
+        statistical_width = z_score * standard_deviation * np.sqrt(horizon)
+        width = max(float(statistical_width), point * minimum_interval_rate)
+        forecasts.append(
+            {
+                "horizon_days": horizon,
+                "predicted_demand": point,
+                "lower_bound": max(point - width, 0.0),
+                "upper_bound": point + width,
+                "interval_level": service_level,
+                "method": "recent_demand_direct_forecast",
+            }
+        )
+    return forecasts
+
+
+def _scale_slice(values: list[float], start: int, end: int, target: float) -> None:
+    end = min(end, len(values))
+    if start >= end:
+        return
+    current = float(sum(values[start:end]))
+    if current <= 0:
+        replacement = target / (end - start)
+        values[start:end] = [replacement] * (end - start)
+        return
+    scale = target / current
+    values[start:end] = [value * scale for value in values[start:end]]
+
+
+def _calibrate_daily_predictions(
+    predictions: list[float], direct: list[dict[str, float | int | str]]
+) -> list[float]:
+    calibrated = list(predictions)
+    totals = {int(item["horizon_days"]): float(item["predicted_demand"]) for item in direct}
+    _scale_slice(calibrated, 0, 7, totals[7])
+    _scale_slice(calibrated, 7, 14, max(totals[14] - totals[7], 0.0))
+    _scale_slice(calibrated, 14, 30, max(totals[30] - totals[14], 0.0))
+
+    daily_target = totals[30] / 30
+    for start in range(30, len(calibrated), 30):
+        end = min(start + 30, len(calibrated))
+        _scale_slice(calibrated, start, end, daily_target * (end - start))
+    return calibrated
+
+
 def _feature_row(
     *,
     forecast_date: date,
@@ -122,7 +219,8 @@ def forecast_multiple_horizons(
 ) -> dict[str, Any]:
     bundle = load_stock_bundle(artifact_path)
     columns: list[str] = bundle["feature_columns"]
-    history = [float(value) for value in recent_daily_demand]
+    history_days = len(recent_daily_demand)
+    history = _pad_history(recent_daily_demand)
     daily: list[DailyPoint] = []
 
     for offset in range(forecast_days):
@@ -140,7 +238,11 @@ def forecast_multiple_horizons(
         daily.append({"date": current_date, "predicted_demand": prediction})
         history.append(prediction)
 
-    predictions = [float(point["predicted_demand"]) for point in daily]
+    raw_predictions = [float(point["predicted_demand"]) for point in daily]
+    direct_horizons = _direct_horizon_forecasts(recent_daily_demand, service_level)
+    predictions = _calibrate_daily_predictions(raw_predictions, direct_horizons)
+    for point, prediction in zip(daily, predictions, strict=True):
+        point["predicted_demand"] = prediction
     recent_std = float(np.std(recent_daily_demand[-7:], ddof=1))
     uncertainty = max(recent_std, float(np.mean(predictions[:7])) * 0.10)
     safety_stock = (
@@ -180,6 +282,8 @@ def forecast_multiple_horizons(
             "stockout_risk": float(stockout_risk),
             "status": status,
         },
+        "direct_horizons": direct_horizons,
+        "data_readiness": _data_readiness(history_days),
         "daily": daily,
         "weekly": _aggregate(daily, _week_key),
         "monthly": _aggregate(daily, _month_key),
@@ -195,5 +299,11 @@ def forecast_multiple_horizons(
                 "Long-range forecasts are planning estimates and should be refreshed as actual "
                 "sales arrive."
             ),
+            (
+                "The 7, 14 and 30 day totals use a low-data direct forecast and calibrate the ML "
+                "daily curve to prevent recursive demand collapse."
+            ),
+            "Uncertainty ranges are statistical planning bands, not yet empirically calibrated.",
+            "Production readiness remains false until TechNova data is retrained and backtested.",
         ],
     }
