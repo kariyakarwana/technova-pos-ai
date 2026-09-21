@@ -1,4 +1,6 @@
 .venv/
+.venv-codex/
+.uv-cache/
 .env
 __pycache__/
 *.py[cod]
@@ -12,6 +14,7 @@ htmlcov/
 data/
 artifacts/
 models/
+reports/
 
 *.joblib
 *.pkl
