@@ -1,7 +1,7 @@
 [project]
 name = "technova-ai-service"
 version = "0.1.0"
-description = "Add your description here"
+description = "Retail AI service for TechNova inventory, pricing and loyalty intelligence"
 readme = "README.md"
 authors = [
     { name = "kariyakarwana", email = "kariyakarawanaz@gmail.com" }
@@ -13,6 +13,7 @@ dependencies = [
     "joblib>=1.6.0",
     "minio>=7.2.20",
     "numpy>=2.5.3",
+    "openpyxl>=3.1.5",
     "orjson>=3.12.0",
     "pandas>=3.0.5",
     "pydantic>=2.13.5",
@@ -23,8 +24,24 @@ dependencies = [
     "uvicorn[standard]>=0.53.0",
 ]
 
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+
 [project.scripts]
-technova-ai-service = "technova_ai_service:main"
+technova-ai-service = "technova_ai_service.main:run"
 
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]
