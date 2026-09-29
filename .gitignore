@@ -1,6 +1,4 @@
 .venv/
-.venv-codex/
-.uv-cache/
 .env
 __pycache__/
 *.py[cod]
@@ -12,9 +10,9 @@ __pycache__/
 htmlcov/
 
 data/
+data/raw/rossmann/
 artifacts/
 models/
-reports/
 
 *.joblib
 *.pkl
