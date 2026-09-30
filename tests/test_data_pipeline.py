@@ -1,9 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 
 from technova_ai_service.data.online_retail import clean_transactions
-from technova_ai_service.features.stock_intelligence.features import build_stock_features
+from technova_ai_service.features.stock_intelligence.features import (
+    build_stock_features,
+)
 
 
 def test_clean_transactions_removes_returns_and_invalid_values() -> None:
@@ -13,7 +15,7 @@ def test_clean_transactions_removes_returns_and_invalid_values() -> None:
             "product_id": ["A", "A", "B", "C"],
             "description": ["A", "A", "B", "C"],
             "quantity": [2, 1, -1, 1],
-            "invoice_date": [datetime(2026, 1, 1)] * 4,
+            "invoice_date": [datetime(2026, 1, 1, tzinfo=UTC)] * 4,
             "unit_price": [10.0, 10.0, 5.0, 0.0],
             "customer_id": ["1", "1", "2", "3"],
             "country": ["LK"] * 4,
@@ -25,7 +27,7 @@ def test_clean_transactions_removes_returns_and_invalid_values() -> None:
 
 
 def test_stock_features_use_prior_demand_only() -> None:
-    start = datetime(2026, 1, 1)
+    start = datetime(2026, 1, 1, tzinfo=UTC)
     panel = pd.DataFrame(
         {
             "date": [start + timedelta(days=index) for index in range(40)],

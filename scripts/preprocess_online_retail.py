@@ -2,7 +2,7 @@ import argparse
 import csv
 import xml.etree.ElementTree as ET
 import zipfile
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 OUTPUT_COLUMNS = [
@@ -48,7 +48,7 @@ def _value(cell: ET.Element, shared_strings: list[str]) -> str:
 
 def _excel_datetime(serial: str) -> str:
     value = float(serial)
-    converted = datetime(1899, 12, 30) + timedelta(days=value)
+    converted = datetime(1899, 12, 30, tzinfo=UTC) + timedelta(days=value)
     return converted.isoformat()
 
 
