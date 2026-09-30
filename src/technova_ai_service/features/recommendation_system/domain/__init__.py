@@ -13,14 +13,14 @@ from .models import (
 )
 
 __all__ = [
-    "RecommendationContext",
-    "RecommendationReasonCode",
-    "ScoredRecommendation",
-    "RecommendationMetrics",
-    "CatalogProduct",
     "AssociationRule",
+    "CandidateGenerator",
+    "CatalogProduct",
+    "RecommendationContext",
+    "RecommendationMetrics",
+    "RecommendationPredictor",
+    "RecommendationReasonCode",
     "RecommendationValidationReport",
     "Recommender",
-    "CandidateGenerator",
-    "RecommendationPredictor",
+    "ScoredRecommendation",
 ]

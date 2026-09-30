@@ -101,10 +101,7 @@ def is_sri_lankan_festive_peak(target_date: date) -> bool:
         return True
 
     # 3. Christmas & Year-End Shopping Peak (Dec 15 - Dec 31)
-    if month == 12 and 15 <= day <= 31:
-        return True
-
-    return False
+    return bool(month == 12 and 15 <= day <= 31)
 
 
 def get_sri_lankan_holiday_flags(

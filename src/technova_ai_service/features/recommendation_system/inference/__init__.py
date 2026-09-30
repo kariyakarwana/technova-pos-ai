@@ -12,9 +12,9 @@ from .predictor import RecommendationPredictor
 
 __all__ = [
     "ArtifactRegistry",
-    "get_default_paths",
     "RecommendationBundle",
-    "load_recommendation_bundle",
-    "clear_recommendation_bundle_cache",
     "RecommendationPredictor",
+    "clear_recommendation_bundle_cache",
+    "get_default_paths",
+    "load_recommendation_bundle",
 ]

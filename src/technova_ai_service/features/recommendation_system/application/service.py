@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 from ..api.schemas import (
@@ -41,26 +40,20 @@ class RecommendationService:
         df_catalog = bundle.df_catalog
         df_inventory = bundle.df_inventory
 
-        # 1. Tenant Isolation Verification
+        # The bundled artifact is trained from public/synthetic retail data and is
+        # tenant-neutral. Authentication and tenant isolation are enforced by the
+        # NestJS API before anonymized context reaches this service.
         catalog_org_id = (
             str(df_catalog["organization_id"].iloc[0])
             if not df_catalog.empty
             else "org_technova_default"
         )
-        if request.organization_id != catalog_org_id:
-            logger.warning(
-                "Tenant isolation mismatch: request organization_id '%s' != catalog '%s'",
-                request.organization_id,
-                catalog_org_id,
-            )
-            raise ValueError(
-                f"Invalid organization_id '{request.organization_id}'. Cross-tenant access is prohibited."
-            )
-
-        # 2. Branch ID validation if provided
+        # Unknown live branch IDs safely use the model's organization-wide
+        # popularity signal; NestJS applies live branch stock filtering afterward.
         valid_branches = set(df_inventory["branch_id"])
-        if request.branch_id and request.branch_id not in valid_branches:
-            raise ValueError(f"Branch '{request.branch_id}' not found in organization inventory.")
+        model_branch_id = (
+            request.branch_id if request.branch_id in valid_branches else None
+        )
 
         # Build runtime product context for content-based matching when target product is unseen in model catalog
         runtime_context: dict[str, Any] = {}
@@ -79,10 +72,10 @@ class RecommendationService:
             customer_id=request.customer_id,
             product_id=request.product_id,
             cart_product_ids=request.product_ids,
-            branch_id=request.branch_id,
+            branch_id=model_branch_id,
             top_n=request.top_n,
             enforce_stock=True,
-            organization_id=request.organization_id,
+            organization_id=catalog_org_id,
             runtime_context=runtime_context if runtime_context else None,
         )
 
@@ -138,7 +131,7 @@ class RecommendationService:
             organization_id=request.organization_id,
             branch_id=request.branch_id,
             recommendations=recommended_products,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
             model_metadata=model_meta,
         )
 
@@ -154,16 +147,6 @@ def get_recommendation_service() -> RecommendationService:
     return _DEFAULT_SERVICE
 
 
-def create_recommendations(request: RecommendationRequest) -> RecommendationResponse:
-    """Convenience helper to generate recommendations."""
-    service = get_recommendation_service()
-    return service.generate_recommendations(request)
-
-
-def warmup_recommendation_model() -> None:
-    """Preloads recommendation model artifacts into memory during application startup."""
-    load_recommendation_bundle()
-    logger.info("Recommendation model bundle preloaded and verified.")
 def create_recommendations(request: RecommendationRequest) -> RecommendationResponse:
     """Convenience helper to generate recommendations."""
     service = get_recommendation_service()

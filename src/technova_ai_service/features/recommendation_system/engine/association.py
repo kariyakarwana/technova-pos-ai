@@ -257,8 +257,7 @@ class FPGrowthModel:
                         continue
                     # Weight score by confidence and normalized log-lift
                     score = float(rule.confidence)
-                    if score > candidate_scores[target_item]:
-                        candidate_scores[target_item] = score
+                    candidate_scores[target_item] = max(candidate_scores[target_item], score)
 
         # Rank candidates
         ranked = sorted(candidate_scores.items(), key=lambda kv: kv[1], reverse=True)

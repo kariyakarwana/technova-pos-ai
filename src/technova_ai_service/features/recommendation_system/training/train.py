@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
-from pathlib import Path
 import time
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import joblib
@@ -43,11 +43,11 @@ def train_recommendation_models(
     df_catalog = pd.read_parquet(d_dir / "catalog_products.parquet")
     df_customers = pd.read_parquet(d_dir / "customer_profiles.parquet")
     df_baskets = pd.read_parquet(d_dir / "transaction_baskets.parquet")
-    df_inventory = pd.read_parquet(d_dir / "branch_inventory.parquet")
+    pd.read_parquet(d_dir / "branch_inventory.parquet")
 
     # 2. Chronological Split
     splitter = ChronologicalSplitter(val_start_date="2014-11-16", test_start_date="2014-12-08")
-    df_train, df_val, df_test = splitter.split(df_baskets)
+    df_train, _df_val, _df_test = splitter.split(df_baskets)
 
     t0 = time.time()
 
@@ -98,7 +98,7 @@ def train_recommendation_models(
         "model_name": "TechNova Hybrid Product Recommendation Engine",
         "version": "1.0.0",
         "training_metadata": {
-            "trained_at": datetime.now(timezone.utc).isoformat(),
+            "trained_at": datetime.now(UTC).isoformat(),
             "training_time_seconds": round(t_train, 2),
             "date_range": {
                 "train_start": str(df_train["transaction_date"].min()),

@@ -9,7 +9,6 @@ from technova_ai_service.features.recommendation_system.api.schemas import (
     RecommendationContext,
     RecommendationReasonCode,
     RecommendationRequest,
-    RecommendationResponse,
     RecommendedProduct,
 )
 

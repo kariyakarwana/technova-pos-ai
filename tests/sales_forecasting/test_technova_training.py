@@ -2,26 +2,22 @@
 
 import datetime
 from pathlib import Path
-import numpy as np
+
 import pandas as pd
 import pytest
-from fastapi.testclient import TestClient
 
 from technova_ai_service.features.sales_forecasting.inference import (
-    load_forecast_bundle,
     predict_sales_forecast,
 )
 from technova_ai_service.features.sales_forecasting.schemas import (
     DailyRevenuePoint,
     FutureCalendarPoint,
-    SalesForecastRequest,
 )
 from technova_ai_service.features.sales_forecasting.training import (
     TECHNOVA_SALES_FEATURE_COLUMNS,
     train_sales_forecasting_model,
     validate_training_dataset,
 )
-from technova_ai_service.main import app
 from technova_ai_service.modeling.artifacts import load_artifact
 
 

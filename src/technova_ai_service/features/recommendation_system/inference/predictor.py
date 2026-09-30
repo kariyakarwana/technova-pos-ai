@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-
-from ..domain.contracts import RecommendationPredictor as IRecommendationPredictor
 from ..domain.models import ScoredRecommendation
 from .artifact_registry import get_default_paths
 from .model_loader import (
@@ -54,7 +50,7 @@ class RecommendationPredictor:
 __all__ = [
     "RecommendationBundle",
     "RecommendationPredictor",
-    "load_recommendation_bundle",
     "clear_recommendation_bundle_cache",
     "get_default_paths",
+    "load_recommendation_bundle",
 ]

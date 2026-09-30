@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
 
 from technova_ai_service.features.recommendation_system.inference import (

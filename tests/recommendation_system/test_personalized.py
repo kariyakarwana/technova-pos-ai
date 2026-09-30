@@ -5,11 +5,11 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from technova_ai_service.features.recommendation_system.engine.similarity import (
-    ItemSimilarityModel,
-)
 from technova_ai_service.features.recommendation_system.engine.personalization import (
     PersonalizedRecommender,
+)
+from technova_ai_service.features.recommendation_system.engine.similarity import (
+    ItemSimilarityModel,
 )
 
 

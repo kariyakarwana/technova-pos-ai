@@ -13,11 +13,11 @@ from .schemas import (
 )
 
 __all__ = [
-    "router",
     "RecommendationContext",
+    "RecommendationModelMetadata",
     "RecommendationReasonCode",
     "RecommendationRequest",
-    "RecommendedProduct",
-    "RecommendationModelMetadata",
     "RecommendationResponse",
+    "RecommendedProduct",
+    "router",
 ]

@@ -7,8 +7,7 @@ multi-domain retail catalog, realistic customer archetypes, and co-purchase bask
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -190,7 +189,6 @@ class RecommendationDatasetGenerator:
         """Generates realistic transaction baskets driven by Rossmann footfall and temporal rhythms."""
         # Active products eligible for purchase
         active_products = [p for p in catalog if p.is_active]
-        active_prod_ids = [p.product_id for p in active_products]
         prod_map = {p.product_id: p for p in catalog}
 
         # Weight distribution for seed product selection
@@ -436,7 +434,7 @@ class RecommendationDatasetGenerator:
         # Calculate top co-purchased pairs
         baskets_by_txn = (
             df_baskets.groupby("transaction_id")["product_id"]
-            .apply(lambda s: sorted(list(set(s))))
+            .apply(lambda s: sorted(set(s)))
         )
         pair_counts: dict[str, int] = {}
         for items in baskets_by_txn:
@@ -520,7 +518,7 @@ class RecommendationDatasetGenerator:
                 "n_customers": self.n_customers,
             },
             "summary_metrics": summary,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
 

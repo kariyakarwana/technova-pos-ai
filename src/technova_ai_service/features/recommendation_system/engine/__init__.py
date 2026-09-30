@@ -17,17 +17,17 @@ from .similarity import ContentSimilarityModel, ItemSimilarityModel
 from .trending import TrendingEngine
 
 __all__ = [
-    "AssociationRule",
-    "FPGrowthModel",
-    "ItemSimilarityModel",
-    "ContentSimilarityModel",
-    "PersonalizedRecommender",
-    "TrendingEngine",
-    "BranchPopularityEngine",
-    "CompatibilityEngine",
-    "CandidateGenerationEngine",
-    "HybridRecommendationEngine",
-    "ScoredRecommendation",
     "DEFAULT_CONTEXT_WEIGHTS",
     "EXPLANATION_TEMPLATES",
+    "AssociationRule",
+    "BranchPopularityEngine",
+    "CandidateGenerationEngine",
+    "CompatibilityEngine",
+    "ContentSimilarityModel",
+    "FPGrowthModel",
+    "HybridRecommendationEngine",
+    "ItemSimilarityModel",
+    "PersonalizedRecommender",
+    "ScoredRecommendation",
+    "TrendingEngine",
 ]

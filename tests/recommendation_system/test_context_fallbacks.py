@@ -1,12 +1,20 @@
 """Comprehensive verification test for CUSTOMER, TRENDING, and POPULAR contexts."""
 
-import pytest
 import pandas as pd
-from technova_ai_service.features.recommendation_system.engine.ranking import HybridRecommendationEngine
-from technova_ai_service.features.recommendation_system.engine.personalization import PersonalizedRecommender
-from technova_ai_service.features.recommendation_system.engine.trending import TrendingEngine
-from technova_ai_service.features.recommendation_system.engine.popularity import BranchPopularityEngine
-from technova_ai_service.features.recommendation_system.engine.similarity import ItemSimilarityModel
+import pytest
+
+from technova_ai_service.features.recommendation_system.engine.personalization import (
+    PersonalizedRecommender,
+)
+from technova_ai_service.features.recommendation_system.engine.popularity import (
+    BranchPopularityEngine,
+)
+from technova_ai_service.features.recommendation_system.engine.ranking import (
+    HybridRecommendationEngine,
+)
+from technova_ai_service.features.recommendation_system.engine.trending import (
+    TrendingEngine,
+)
 
 
 def test_customer_context_with_and_without_history():

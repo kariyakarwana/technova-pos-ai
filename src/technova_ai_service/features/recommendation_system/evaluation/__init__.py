@@ -17,9 +17,9 @@ from .metrics import (
 __all__ = [
     "ChronologicalSplitter",
     "OfflineEvaluator",
-    "RecommendationValidationReport",
-    "validate_recommendation_dataset",
     "RecommendationMetrics",
+    "RecommendationValidationReport",
     "_calculate_dcg",
     "_calculate_idcg",
+    "validate_recommendation_dataset",
 ]

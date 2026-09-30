@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
+
+# Register legacy module paths in sys.modules for joblib/pickle backward compatibility
+# when deserializing pre-existing artifacts without touching artifact files on disk.
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +15,27 @@ import joblib
 import pandas as pd
 
 from ..data.transactions import ChronologicalSplitter
+from ..engine import (
+    association as _engine_association,
+)
+from ..engine import (
+    compatibility as _engine_compatibility,
+)
+from ..engine import (
+    personalization as _engine_personalization,
+)
+from ..engine import (
+    popularity as _engine_popularity,
+)
+from ..engine import (
+    ranking as _engine_ranking,
+)
+from ..engine import (
+    similarity as _engine_similarity,
+)
+from ..engine import (
+    trending as _engine_trending,
+)
 from ..engine.association import FPGrowthModel
 from ..engine.compatibility import CompatibilityEngine
 from ..engine.personalization import PersonalizedRecommender
@@ -22,19 +47,6 @@ from ..engine.ranking import (
 from ..engine.similarity import ContentSimilarityModel, ItemSimilarityModel
 from ..engine.trending import TrendingEngine
 from .artifact_registry import ArtifactRegistry, get_default_paths
-
-# Register legacy module paths in sys.modules for joblib/pickle backward compatibility
-# when deserializing pre-existing artifacts without touching artifact files on disk.
-import sys
-from ..engine import (
-    association as _engine_association,
-    compatibility as _engine_compatibility,
-    personalization as _engine_personalization,
-    popularity as _engine_popularity,
-    ranking as _engine_ranking,
-    similarity as _engine_similarity,
-    trending as _engine_trending,
-)
 
 _LEGACY_MODULE_ALIASES = {
     "technova_ai_service.features.recommendation_system.association_rules": _engine_association,

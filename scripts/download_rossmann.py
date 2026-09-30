@@ -17,21 +17,18 @@ import argparse
 import csv
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import urllib.request
 import zipfile
+from pathlib import Path
 from typing import Any
 
 # Ensure stdout handles UTF-8 cleanly on Windows
 if hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
+    sys.stdout.reconfigure(encoding="utf-8")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -98,8 +95,8 @@ def get_kaggle_credentials() -> tuple[str | None, str | None]:
                 k = data.get("key")
                 if u and k:
                     return str(u).strip(), str(k).strip()
-        except Exception:
-            pass
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            return None, None
 
     return None, None
 
@@ -138,10 +135,10 @@ def download_from_kaggle(destination_dir: Path) -> None:
         if has_kaggle_cli:
             try:
                 cmd = ["kaggle", "competitions", "download", "-c", KAGGLE_COMPETITION, "-p", str(temp_dir)]
-                res = subprocess.run(cmd, capture_output=True, text=True)
+                res = subprocess.run(cmd, capture_output=True, text=True, check=False)
                 if res.returncode == 0:
                     download_success = True
-            except Exception:
+            except OSError:
                 download_success = False
 
         # Method 2: Direct Official Kaggle REST API
@@ -159,7 +156,7 @@ def download_from_kaggle(destination_dir: Path) -> None:
                 with urllib.request.urlopen(req) as response, open(zip_out, "wb") as out_file:
                     shutil.copyfileobj(response, out_file)
                 download_success = True
-            except Exception as e:
+            except OSError as e:
                 print(f"ERROR: Direct Kaggle API download failed: {e}", file=sys.stderr)
 
         if not download_success:
@@ -257,7 +254,7 @@ def validate_rossmann_dataset(dataset_dir: Path) -> dict[str, Any]:
                 "columns": header,
             }
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - report every malformed dataset failure
             results["is_valid"] = False
             results["errors"].append(f"Could not read {fname}: {e}")
 
@@ -327,7 +324,7 @@ Examples:
     print("[OK] CSV files readable")
     print("[OK] Required schema verified")
 
-    print(f"\nRossmann dataset setup completed successfully.")
+    print("\nRossmann dataset setup completed successfully.")
     print("=" * 60)
     sys.exit(0)
 

@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import re
-from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
-
 
 from ..domain.models import RecommendationValidationReport
 
@@ -156,7 +153,9 @@ def validate_recommendation_dataset(
     }
 
     # 11. Co-Purchase Relationships
-    baskets_by_txn = df_baskets.groupby("transaction_id")["product_id"].apply(lambda s: sorted(list(set(s))))
+    baskets_by_txn = df_baskets.groupby("transaction_id")["product_id"].apply(
+        lambda s: sorted(set(s))
+    )
     co_occurrences: dict[str, int] = {}
     for items in baskets_by_txn:
         if len(items) >= 2:
@@ -264,7 +263,7 @@ def validate_recommendation_dataset(
     metrics = {
         "unique_products": int(df_catalog["product_id"].nunique()),
         "active_products": int(df_catalog[df_catalog["is_active"]]["product_id"].nunique()),
-        "inactive_products": int(len(inactive_skus)),
+        "inactive_products": len(inactive_skus),
         "total_customers": total_customers,
         "repeat_customers": repeat_customers,
         "repeat_customer_ratio": round(repeat_ratio, 4),

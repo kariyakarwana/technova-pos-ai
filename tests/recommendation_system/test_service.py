@@ -6,7 +6,6 @@ import pytest
 
 from technova_ai_service.features.recommendation_system.api.schemas import (
     RecommendationContext,
-    RecommendationReasonCode,
     RecommendationRequest,
     RecommendationResponse,
 )
@@ -130,14 +129,14 @@ def test_service_stock_filtering_removes_inactive(rec_service: RecommendationSer
         assert r.stock_quantity > 0
 
 
-def test_service_cross_tenant_isolation(rec_service: RecommendationService) -> None:
+def test_service_artifact_is_tenant_neutral(rec_service: RecommendationService) -> None:
     req = RecommendationRequest(
         organization_id="org_unauthorized_other",
         context=RecommendationContext.COLD_START,
     )
-    with pytest.raises(ValueError) as exc:
-        rec_service.generate_recommendations(req)
-    assert "Cross-tenant access is prohibited" in str(exc.value)
+    response = rec_service.generate_recommendations(req)
+    assert response.organization_id == "org_unauthorized_other"
+    assert isinstance(response.recommendations, list)
 
 
 def test_service_unseen_product_id_honest_unavailable_or_content_based(

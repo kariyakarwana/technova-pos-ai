@@ -7,11 +7,11 @@ import pprint
 import time
 from pathlib import Path
 
-from technova_ai_service.features.recommendation_system.training.pipeline import (
-    generate_recommendation_dataset,
-)
 from technova_ai_service.features.recommendation_system.evaluation.evaluator import (
     validate_recommendation_dataset,
+)
+from technova_ai_service.features.recommendation_system.training.pipeline import (
+    generate_recommendation_dataset,
 )
 
 

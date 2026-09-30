@@ -3,28 +3,34 @@
 
 from __future__ import annotations
 
-import pprint
-import sys
 from pathlib import Path
 
 import joblib
 import pandas as pd
 
-from technova_ai_service.features.recommendation_system.engine.association import FPGrowthModel
-from technova_ai_service.features.recommendation_system.engine.popularity import BranchPopularityEngine
-from technova_ai_service.features.recommendation_system.engine.compatibility import CompatibilityEngine
+from technova_ai_service.features.recommendation_system.engine.association import (
+    FPGrowthModel,
+)
+from technova_ai_service.features.recommendation_system.engine.compatibility import (
+    CompatibilityEngine,
+)
+from technova_ai_service.features.recommendation_system.engine.personalization import (
+    PersonalizedRecommender,
+)
+from technova_ai_service.features.recommendation_system.engine.ranking import (
+    HybridRecommendationEngine,
+)
 from technova_ai_service.features.recommendation_system.engine.similarity import (
     ContentSimilarityModel,
     ItemSimilarityModel,
 )
+from technova_ai_service.features.recommendation_system.engine.trending import (
+    TrendingEngine,
+)
 from technova_ai_service.features.recommendation_system.evaluation import (
     ChronologicalSplitter,
     OfflineEvaluator,
-    RecommendationMetrics,
 )
-from technova_ai_service.features.recommendation_system.engine.personalization import PersonalizedRecommender
-from technova_ai_service.features.recommendation_system.engine.ranking import HybridRecommendationEngine
-from technova_ai_service.features.recommendation_system.engine.trending import TrendingEngine
 
 
 def main() -> None:
@@ -45,7 +51,7 @@ def main() -> None:
 
     # 2. Chronological Split
     splitter = ChronologicalSplitter(val_start_date="2014-11-16", test_start_date="2014-12-08")
-    df_train, df_val, df_test = splitter.split(df_baskets)
+    df_train, _df_val, df_test = splitter.split(df_baskets)
 
     print(f"Test Split Date Window: {df_test['transaction_date'].min().date()} to {df_test['transaction_date'].max().date()}")
     print(f"Test Transactions: {df_test['transaction_id'].nunique():,}, Line Items: {len(df_test):,}")

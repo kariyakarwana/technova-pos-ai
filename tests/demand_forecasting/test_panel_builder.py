@@ -1,8 +1,5 @@
 from datetime import date, timedelta
 
-import pandas as pd
-import pytest
-
 from technova_ai_service.features.demand_forecasting.panel import (
     build_daily_demand_panel,
 )

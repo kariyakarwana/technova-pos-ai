@@ -17,9 +17,11 @@ def download(output: Path, *, force: bool = False) -> Path:
     with tempfile.TemporaryDirectory() as temporary_directory:
         archive = Path(temporary_directory) / "online-retail.zip"
         print(f"Downloading {DATASET_URL}")
-        with urllib.request.urlopen(DATASET_URL, timeout=120) as response:
-            with archive.open("wb") as destination:
-                shutil.copyfileobj(response, destination)
+        with (
+            urllib.request.urlopen(DATASET_URL, timeout=120) as response,
+            archive.open("wb") as destination,
+        ):
+            shutil.copyfileobj(response, destination)
         with zipfile.ZipFile(archive) as package:
             member = next(name for name in package.namelist() if name.lower().endswith(".xlsx"))
             with package.open(member) as source, output.open("wb") as destination:

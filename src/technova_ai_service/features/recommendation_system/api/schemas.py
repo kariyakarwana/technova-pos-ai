@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..domain.enums import RecommendationContext, RecommendationReasonCode
@@ -87,9 +85,10 @@ class RecommendationRequest(BaseModel):
             if not self.branch_id or not self.branch_id.strip():
                 raise ValueError("branch_id is required when context is BRANCH.")
 
-        elif ctx == RecommendationContext.CUSTOMER:
-            if not self.customer_id or not self.customer_id.strip():
-                raise ValueError("customer_id is required when context is CUSTOMER.")
+        elif ctx == RecommendationContext.CUSTOMER and (
+            not self.customer_id or not self.customer_id.strip()
+        ):
+            raise ValueError("customer_id is required when context is CUSTOMER.")
 
         return self
 
@@ -142,9 +141,9 @@ class RecommendationResponse(BaseModel):
 
 __all__ = [
     "RecommendationContext",
+    "RecommendationModelMetadata",
     "RecommendationReasonCode",
     "RecommendationRequest",
-    "RecommendedProduct",
-    "RecommendationModelMetadata",
     "RecommendationResponse",
+    "RecommendedProduct",
 ]

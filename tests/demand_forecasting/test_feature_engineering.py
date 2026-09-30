@@ -23,7 +23,6 @@ from technova_ai_service.features.demand_forecasting.schemas import (
 
 
 def _generate_synthetic_panel(days: int = 60, seed: int = 42) -> pd.DataFrame:
-    rng = np.random.default_rng(seed)
     start = date(2026, 1, 1)
     dates = [start + timedelta(days=i) for i in range(days)]
     quantities = [float(x) for x in range(days)]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -53,7 +53,7 @@ def load_demand_forecast_bundle(path_str: str | None = None) -> dict[str, Any]:
 
     bundle: dict[str, Any] = joblib.load(model_path)
     if not isinstance(bundle, dict):
-        raise ValueError(f"Invalid artifact format in {model_path}: expected dictionary bundle.")
+        raise TypeError(f"Invalid artifact format in {model_path}: expected dictionary bundle.")
 
     required_keys = ("model", "feature_columns", "model_type")
     for key in required_keys:
@@ -85,7 +85,7 @@ def resolve_categorical_levels(bundle: dict[str, Any] | None, column: str, fallb
                     idx = feature_names.index(column)
                     if idx < len(pandas_cat) and pandas_cat[idx]:
                         return list(pandas_cat[idx])
-            except Exception:
+            except (AttributeError, KeyError, TypeError, ValueError):
                 pass
     return fallback_levels
 
@@ -178,7 +178,7 @@ def predict_demand_forecast(
         feature_count=len(feature_columns),
     )
 
-    start_date = request.forecast_date or (date.today() + timedelta(days=1))
+    start_date = request.forecast_date or (datetime.now(UTC).date() + timedelta(days=1))
     horizon = request.horizon
 
     contexts = request.daily_contexts or []

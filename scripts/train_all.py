@@ -23,6 +23,12 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 import json
 import os
+import platform
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 import platform
 import subprocess
@@ -35,10 +41,7 @@ import pyarrow.parquet as pq
 
 # Ensure stdout handles UTF-8 cleanly on Windows
 if hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
+    sys.stdout.reconfigure(encoding="utf-8")
 
 # Project root directory reference
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -69,10 +72,6 @@ def validate_prerequisites() -> tuple[bool, dict[str, Any]]:
         "cpu_count": os.cpu_count(),
     }
 
-    # Python version check (requires Python 3.10+)
-    if sys.version_info < (3, 10):
-        errors.append(f"Python 3.10+ required. Found Python {sys.version.split()[0]}")
-
     # Package verification
     required_packages = ["pandas", "numpy", "pyarrow", "joblib", "sklearn", "lightgbm", "xgboost"]
     for pkg in required_packages:
@@ -94,7 +93,7 @@ def validate_prerequisites() -> tuple[bool, dict[str, Any]]:
             test_file = ad / ".write_test"
             test_file.touch()
             test_file.unlink()
-        except Exception as e:
+        except OSError as e:
             errors.append(f"Directory {ad} is not writable: {e}")
 
     is_valid = len(errors) == 0
@@ -167,8 +166,12 @@ def prepare_and_validate_demand_data(auto_prepare: bool = True) -> tuple[bool, d
         / "demand_forecasting"
         / "augmented_rossmann_unit_demand.parquet"
     )
+    meta_path = dataset_path.parent / f"{dataset_path.stem}_metadata.json"
 
-    if not dataset_path.exists() and auto_prepare:
+    # A Parquet writer can leave a valid-looking partial file after an interrupted
+    # run. The metadata manifest is written only after generation succeeds, so
+    # require both files before reusing the dataset.
+    if (not dataset_path.exists() or not meta_path.exists()) and auto_prepare:
         raw_ok, raw_info = check_raw_rossmann_dataset()
         if not raw_ok:
             return False, {
@@ -183,15 +186,21 @@ def prepare_and_validate_demand_data(auto_prepare: bool = True) -> tuple[bool, d
         print("  Generating Augmented Rossmann Unit-Demand dataset (this may take several minutes)...")
         raw_train = PROJECT_ROOT / "data" / "raw" / "rossmann" / "train.csv"
         raw_store = PROJECT_ROOT / "data" / "raw" / "rossmann" / "store.csv"
-        output_metadata = dataset_path.parent / f"{dataset_path.stem}_metadata.json"
+        configured_max_stores = int(
+            os.environ.get("TECHNOVA_DEMAND_TRAINING_MAX_STORES", "25")
+        )
+        max_stores = configured_max_stores if configured_max_stores > 0 else None
+        sample_description = str(max_stores) if max_stores is not None else "all"
+        print(f"  Using {sample_description} Rossmann stores for demand training.")
         dataset_path.parent.mkdir(parents=True, exist_ok=True)
         generate_augmented_rossmann_dataset(
             train_path=raw_train,
             store_path=raw_store,
             output_parquet_path=dataset_path,
-            output_metadata_path=output_metadata,
-            batch_store_size=50,
+            output_metadata_path=meta_path,
+            batch_store_size=25,
             random_seed=42,
+            max_stores=max_stores,
         )
 
     if not dataset_path.exists():
@@ -204,9 +213,6 @@ def prepare_and_validate_demand_data(auto_prepare: bool = True) -> tuple[bool, d
     # Lightweight metadata verification via PyArrow without reading 50M rows into memory
     pf = pq.ParquetFile(dataset_path)
     total_rows = pf.metadata.num_rows
-    schema_names = pf.schema.names
-
-    meta_path = dataset_path.parent / f"{dataset_path.stem}_metadata.json"
     n_products = 50
     n_stores = 1115
     date_range = "2013-01-01 to 2015-07-31"
@@ -257,8 +263,8 @@ def prepare_and_validate_recommendation_data(auto_prepare: bool = True) -> tuple
         raw_store = PROJECT_ROOT / "data" / "raw" / "rossmann" / "store.csv"
         rec_dir.mkdir(parents=True, exist_ok=True)
         generate_recommendation_dataset(
-            train_path=raw_train,
-            store_path=raw_store,
+            rossmann_train_path=raw_train,
+            rossmann_store_path=raw_store,
             output_dir=rec_dir,
         )
 
@@ -356,7 +362,7 @@ def run_sales_forecasting(eval_only: bool = False) -> SystemStatus:
 
         system_status.status = "SUCCESS"
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - isolate one failed training subsystem
         system_status.status = "FAILED"
         system_status.error_message = str(e)
         print(f"[FAIL] Sales Forecasting FAILED: {e}")
@@ -431,7 +437,7 @@ def run_demand_forecasting(eval_only: bool = False) -> SystemStatus:
 
         system_status.status = "SUCCESS"
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - isolate one failed training subsystem
         system_status.status = "FAILED"
         system_status.error_message = str(e)
         print(f"[FAIL] Demand Forecasting FAILED: {e}")
@@ -491,7 +497,9 @@ def run_recommendation_system(eval_only: bool = False) -> SystemStatus:
 
         # 4. Evaluation execution
         eval_script = PROJECT_ROOT / "scripts" / "evaluate_recommendation_system.py"
-        res_eval = subprocess.run([sys.executable, str(eval_script)], cwd=str(PROJECT_ROOT))
+        res_eval = subprocess.run(
+            [sys.executable, str(eval_script)], cwd=str(PROJECT_ROOT), check=False
+        )
         if res_eval.returncode != 0:
             raise RuntimeError("Recommendation evaluation script failed with non-zero exit code.")
 
@@ -512,7 +520,7 @@ def run_recommendation_system(eval_only: bool = False) -> SystemStatus:
 
         system_status.status = "SUCCESS"
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - isolate one failed training subsystem
         system_status.status = "FAILED"
         system_status.error_message = str(e)
         print(f"[FAIL] Recommendation System FAILED: {e}")
@@ -538,7 +546,7 @@ def write_training_manifest(
         "pipeline": "technova-pos-ai",
         "version": "1.0.0",
         "pipeline_mode": pipeline_mode,
-        "trained_at": datetime.now(timezone.utc).isoformat(),
+        "trained_at": datetime.now(UTC).isoformat(),
         "total_duration_seconds": round(total_duration_seconds, 2),
         "status": overall_status,
         "environment": {

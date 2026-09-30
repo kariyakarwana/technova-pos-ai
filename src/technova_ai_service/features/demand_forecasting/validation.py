@@ -1,18 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
-
-from technova_ai_service.features.demand_forecasting.synthetic_catalog import (
-    ProductCatalogItem,
-    build_synthetic_product_catalog,
-)
 
 
 @dataclass

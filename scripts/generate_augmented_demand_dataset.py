@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-import pprint
 import time
+from pathlib import Path
 
 from technova_ai_service.features.demand_forecasting.augmented_generator import (
     generate_augmented_rossmann_dataset,
@@ -28,7 +27,6 @@ def main() -> None:
     print(f"Output Metadata: {output_metadata}")
     print("=================================================================")
 
-    t0 = time.time()
     metadata = generate_augmented_rossmann_dataset(
         train_path=train_path,
         store_path=store_path,
@@ -37,8 +35,6 @@ def main() -> None:
         batch_store_size=50,
         random_seed=42,
     )
-    t_gen = time.time() - t0
-
     print("\n--- Dataset Generation Complete ---")
     print(f"Rows Written: {metadata['generated_row_count']:,}")
     print(f"Generation Time: {metadata['performance']['generation_time_seconds']}s")

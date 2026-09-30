@@ -1,24 +1,18 @@
 from datetime import date, timedelta
-from pathlib import Path
-from typing import Any
 
-from fastapi.testclient import TestClient
-import numpy as np
 import pandas as pd
 import pytest
+from fastapi.testclient import TestClient
 
 from technova_ai_service.features.demand_forecasting.inference import (
-    CATEGORY_ORDER,
     load_demand_forecast_bundle,
-    predict_demand_forecast,
     predict_from_feature_dataframe,
 )
 from technova_ai_service.features.demand_forecasting.schemas import (
+    MODEL_FEATURE_COLUMNS,
     DailyForecastContext,
     DemandForecastRequest,
     DemandForecastResponse,
-    MODEL_FEATURE_COLUMNS,
-    VALID_CATEGORIES,
 )
 from technova_ai_service.features.demand_forecasting.service import (
     create_demand_forecast,

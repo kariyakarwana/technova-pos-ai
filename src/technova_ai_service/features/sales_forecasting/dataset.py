@@ -16,14 +16,9 @@ from __future__ import annotations
 import datetime
 import math
 from pathlib import Path
-from typing import Sequence
 
 import numpy as np
 import pandas as pd
-
-from technova_ai_service.features.sales_forecasting.training import (
-    TECHNOVA_SALES_FEATURE_COLUMNS,
-)
 
 BRANCH_PROFILES = [
     {
@@ -90,7 +85,6 @@ def generate_technova_daily_revenue_data(
         base_rev = float(profile["base_revenue"])
         operates_sunday = bool(profile["operates_sunday"])
         weekend_boost = float(profile["weekend_boost"])
-        branch_inception = start_date
 
         for cur_date in dates:
             day_of_week = cur_date.weekday()  # 0=Monday, 6=Sunday
@@ -174,7 +168,6 @@ def engineer_technova_features(raw_df: pd.DataFrame, min_history_days: int = 28)
             dow = cur_date.weekday()  # 0=Monday, 6=Sunday
             day_of_month = cur_date.day
             month = cur_date.month
-            year = cur_date.year
             is_weekend = 1 if dow >= 5 else 0
 
             # ISO week

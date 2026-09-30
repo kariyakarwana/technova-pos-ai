@@ -53,7 +53,11 @@ def create_demand_forecast(
     )
 
     total_units = round(sum(p.predicted_units for p in predictions), 2)
-    start_date = predictions[0].forecast_date if predictions else (request.forecast_date or dt.date.today())
+    start_date = (
+        predictions[0].forecast_date
+        if predictions
+        else (request.forecast_date or dt.datetime.now(dt.UTC).date())
+    )
 
     return DemandForecastResponse(
         product_id=request.product_id,

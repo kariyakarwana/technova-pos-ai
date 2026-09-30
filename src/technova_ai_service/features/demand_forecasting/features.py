@@ -12,7 +12,6 @@ from technova_ai_service.features.demand_forecasting.schemas import (
     ROLLING_WINDOWS,
 )
 
-
 FORBIDDEN_LEAKAGE_COLUMNS: set[str] = {
     "discount_application",
     "discount_applications",
@@ -67,13 +66,13 @@ def build_demand_features(
     # 3. Rolling Statistics: strictly shifted by 1 day (prior days only)
     for window in ROLLING_WINDOWS:
         frame[f"rolling_mean_{window}"] = grouped["quantity"].transform(
-            lambda s: s.shift(1).rolling(window, min_periods=1).mean()
+            lambda s, window=window: s.shift(1).rolling(window, min_periods=1).mean()
         )
         frame[f"rolling_std_{window}"] = grouped["quantity"].transform(
-            lambda s: s.shift(1).rolling(window, min_periods=2).std().fillna(0.0)
+            lambda s, window=window: s.shift(1).rolling(window, min_periods=2).std().fillna(0.0)
         )
         frame[f"rolling_max_{window}"] = grouped["quantity"].transform(
-            lambda s: s.shift(1).rolling(window, min_periods=1).max()
+            lambda s, window=window: s.shift(1).rolling(window, min_periods=1).max()
         )
 
     # 4. Price Features & Price Index 28:
@@ -135,7 +134,6 @@ def build_demand_features(
 
     # 9. Handle Incomplete Lags (e.g., initial 28 days of history)
     if drop_incomplete_lags:
-        max_lag = max(DEMAND_LAG_HORIZONS)
         lag_cols = [f"demand_lag_{lag}" for lag in DEMAND_LAG_HORIZONS]
         frame = frame.dropna(subset=lag_cols).reset_index(drop=True)
 

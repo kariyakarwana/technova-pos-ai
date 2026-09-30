@@ -5,7 +5,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
 DEMAND_LAG_HORIZONS: tuple[int, ...] = (1, 2, 3, 7, 14, 21, 28)
 ROLLING_WINDOWS: tuple[int, ...] = (7, 14, 28)
 
@@ -96,7 +95,7 @@ class DemandForecastProductInput(BaseModel):
     recent_daily_demand: list[float] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_demand_history(self) -> "DemandForecastProductInput":
+    def validate_demand_history(self) -> DemandForecastProductInput:
         if any(value < 0 for value in self.recent_daily_demand):
             raise ValueError("recent_daily_demand entries must be non-negative")
         return self

@@ -1,11 +1,12 @@
-from datetime import date, timedelta
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 import joblib
 import numpy as np
 import pandas as pd
 import pytest
+from lightgbm.basic import LightGBMError
 
 from technova_ai_service.features.demand_forecasting.training import (
     MODEL_FEATURE_COLUMNS,
@@ -147,7 +148,7 @@ def test_feature_column_consistency() -> None:
 
     # Missing a column must raise an error during inference
     X_missing = X.drop(columns=[features[0]])
-    with pytest.raises(Exception):
+    with pytest.raises((ValueError, LightGBMError)):
         model.predict(X_missing)
 
 

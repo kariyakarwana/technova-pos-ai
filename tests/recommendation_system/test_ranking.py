@@ -10,7 +10,6 @@ from technova_ai_service.features.recommendation_system.engine.association impor
 )
 from technova_ai_service.features.recommendation_system.engine.ranking import (
     HybridRecommendationEngine,
-    ScoredRecommendation,
 )
 
 
@@ -45,7 +44,7 @@ def sample_setup() -> tuple[HybridRecommendationEngine, pd.DataFrame, pd.DataFra
 def test_hybrid_stock_filtering_and_explainability(
     sample_setup: tuple[HybridRecommendationEngine, pd.DataFrame, pd.DataFrame]
 ) -> None:
-    engine, df_catalog, df_inventory = sample_setup
+    engine, _df_catalog, _df_inventory = sample_setup
 
     # Query with enforce_stock=True
     recs = engine.recommend(

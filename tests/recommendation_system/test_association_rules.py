@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 
 from technova_ai_service.features.recommendation_system.engine.association import (
-    AssociationRule,
     FPGrowthModel,
 )
 

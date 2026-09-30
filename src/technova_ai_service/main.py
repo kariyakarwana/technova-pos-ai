@@ -1,5 +1,5 @@
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
@@ -9,15 +9,40 @@ from technova_ai_service.features.demand_forecasting.router import (
 )
 from technova_ai_service.features.demand_forecasting.service import warmup_demand_model
 from technova_ai_service.features.dynamic_pricing.router import router as pricing_router
-from technova_ai_service.features.loyalty_recommendations.router import router as loyalty_router
+from technova_ai_service.features.loyalty_recommendations.router import (
+    router as loyalty_router,
+)
 from technova_ai_service.features.recommendation_system.api.router import (
     router as recommendation_router,
 )
 from technova_ai_service.features.recommendation_system.application.service import (
     warmup_recommendation_model,
 )
-from technova_ai_service.features.sales_forecasting.router import router as sales_forecast_router
-from technova_ai_service.features.stock_intelligence.router import router as stock_router
+from technova_ai_service.features.sales_forecasting.router import (
+    router as sales_forecast_router,
+)
+from technova_ai_service.features.stock_intelligence.router import (
+    router as stock_router,
+)
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load model once at application startup / service initialization
+    try:
+        warmup_demand_model()
+        logger.info("Demand forecasting model loaded and cached at startup.")
+    except (FileNotFoundError, OSError, TypeError, ValueError) as exc:
+        logger.warning("Demand forecasting model preload failed or deferred: %s", exc)
+    try:
+        warmup_recommendation_model()
+        logger.info("Recommendation model loaded and cached at startup.")
+    except (FileNotFoundError, OSError, TypeError, ValueError) as exc:
+        logger.warning("Recommendation model preload failed or deferred: %s", exc)
+    yield
+
 
 logger = logging.getLogger(__name__)
 

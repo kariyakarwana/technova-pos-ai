@@ -5,7 +5,9 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from technova_ai_service.features.recommendation_system.engine.trending import TrendingEngine
+from technova_ai_service.features.recommendation_system.engine.trending import (
+    TrendingEngine,
+)
 
 
 @pytest.fixture

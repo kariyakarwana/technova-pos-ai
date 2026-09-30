@@ -1,5 +1,7 @@
 from technova_ai_service.config import get_settings
-from technova_ai_service.features.loyalty_recommendations.inference import recommend_products
+from technova_ai_service.features.loyalty_recommendations.inference import (
+    recommend_products,
+)
 from technova_ai_service.features.loyalty_recommendations.schemas import (
     LoyaltyRecommendationRequest,
     LoyaltyRecommendationResponse,

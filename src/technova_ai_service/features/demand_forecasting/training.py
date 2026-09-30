@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
 import time
+from pathlib import Path
 from typing import Any, Literal
 
 import joblib
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingRegressor
 import xgboost as xgb
+from sklearn.ensemble import HistGradientBoostingRegressor
 
 from technova_ai_service.modeling.metrics import regression_metrics
-
 
 ModelType = Literal["lightgbm", "xgboost", "hist_gradient_boosting"]
 

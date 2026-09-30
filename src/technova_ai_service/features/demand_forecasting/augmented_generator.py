@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import time
 import tracemalloc
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -15,7 +15,6 @@ from technova_ai_service.features.demand_forecasting.synthetic_catalog import (
     ProductCatalogItem,
     build_synthetic_product_catalog,
 )
-
 
 AUGMENTED_SCHEMA = pa.schema(
     [

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+
 from fastapi import APIRouter, HTTPException, status
 
 from ..application.service import create_recommendations
@@ -53,9 +54,9 @@ def recommend(request: RecommendationRequest) -> RecommendationResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(error),
         ) from error
-    except Exception as error:
-        logger.exception("Unexpected error in recommendation router: %s", error)
+    except Exception:
+        logger.exception("Unexpected error in recommendation router")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Recommendation inference failed: {error}",
-        ) from error
+            detail="Recommendation inference failed unexpectedly.",
+        ) from None

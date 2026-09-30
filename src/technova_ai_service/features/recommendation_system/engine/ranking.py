@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from ..domain.models import ScoredRecommendation
 from .association import FPGrowthModel
-from .candidate_generation import CandidateGenerationEngine
 from .compatibility import CompatibilityEngine
 from .personalization import PersonalizedRecommender
 from .popularity import BranchPopularityEngine
@@ -21,7 +18,6 @@ from .similarity import (
     _extract_product_document,
 )
 from .trending import TrendingEngine
-
 
 # Default transparent weights per recommendation context
 DEFAULT_CONTEXT_WEIGHTS: dict[str, dict[str, float]] = {
@@ -203,9 +199,10 @@ class HybridRecommendationEngine:
                 if not self.trending.global_trending_scores:
                     raise ValueError("Insufficient historical data")
 
-        elif context == "COLD_START":
-            if self.branch_pop is None or not self.branch_pop.org_popularity:
-                raise ValueError("Insufficient historical data")
+        elif context == "COLD_START" and (
+            self.branch_pop is None or not self.branch_pop.org_popularity
+        ):
+            raise ValueError("Insufficient historical data")
 
         weights = self.context_weights.get(context, self.context_weights["COLD_START"])
         candidate_signals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
@@ -229,8 +226,7 @@ class HybridRecommendationEngine:
         if self.compat is not None and query_prods and weights.get("compatibility", 0) > 0:
             for q_id in query_prods:
                 for cand_id, score in self.compat.find_compatible_products(q_id, top_k=15, exclude_ids=query_set):
-                    if score > candidate_signals[cand_id]["compatibility"]:
-                        candidate_signals[cand_id]["compatibility"] = score
+                    candidate_signals[cand_id]["compatibility"] = max(candidate_signals[cand_id]["compatibility"], score)
 
         # -------------------------------------------------------------
         # 3. Item & Content Similarity Signal
@@ -339,6 +335,17 @@ class HybridRecommendationEngine:
                 if contrib > highest_signal_contrib and sig_val > 0:
                     highest_signal_contrib = contrib
                     highest_signal_key = sig_key
+
+            # Product-based answers may use trend/popularity as secondary ranking
+            # signals, but their user-facing explanation must remain grounded in
+            # the queried product relationship.
+            if context in ("PRODUCT", "CART_READY"):
+                grounded_keys = ("association", "compatibility", "similarity")
+                highest_signal_key = max(
+                    (key for key in grounded_keys if signals.get(key, 0) > 0),
+                    key=lambda key: weights.get(key, 0) * signals[key],
+                    default="similarity",
+                )
 
             # D. Determine Explainability Code & Text
             code, reason_txt = EXPLANATION_TEMPLATES.get(

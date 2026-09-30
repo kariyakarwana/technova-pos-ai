@@ -2,6 +2,7 @@
 
 from datetime import date
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -10,7 +11,6 @@ from technova_ai_service.features.sales_forecasting.schemas import (
     DailyRevenuePoint,
     FutureCalendarPoint,
     SalesForecastRequest,
-    SalesForecastResponse,
 )
 from technova_ai_service.main import app
 

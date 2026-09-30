@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 import json
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +32,7 @@ class ItemSimilarityModel:
 
         baskets_grouped = (
             df_baskets.groupby("transaction_id")["product_id"]
-            .apply(lambda s: sorted(list(set(s))))
+            .apply(lambda s: sorted(set(s)))
         )
 
         for items in baskets_grouped:
@@ -45,7 +45,7 @@ class ItemSimilarityModel:
                         co_counts[pair] += 1
 
         self.item_counts = dict(item_counts)
-        self.unique_items = sorted(list(item_counts.keys()))
+        self.unique_items = sorted(item_counts.keys())
 
         # Step 2: Calculate cosine similarity
         sim_scores: dict[str, list[tuple[str, float]]] = defaultdict(list)
@@ -161,7 +161,7 @@ def _extract_product_document(row: pd.Series | dict[str, Any]) -> str:
                             tokens.append(f"spec_{k}_{str(sub_v).replace(' ', '_').lower()}")
                     elif isinstance(v, (str, int, float, bool)):
                         tokens.append(f"spec_{k}_{str(v).replace(' ', '_').lower()}")
-        except Exception:
+        except (json.JSONDecodeError, TypeError, ValueError):
             pass
 
     return " ".join(tokens)
@@ -214,7 +214,7 @@ class ContentSimilarityModel:
                     self._catalog_matrix = self.vectorizer.transform(cat_docs)
                 q_vec = self.vectorizer.transform([runtime_document])
                 scores = cosine_similarity(q_vec, self._catalog_matrix)[0]
-            except Exception:
+            except (AttributeError, TypeError, ValueError):
                 scores = None
 
         if scores is None or len(scores) == 0:

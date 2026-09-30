@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -154,14 +155,14 @@ def test_http_recommend_unseen_product_does_not_return_400(client: TestClient) -
     assert isinstance(data_content["recommendations"], list)
 
 
-def test_http_recommend_cross_tenant_returns_400(client: TestClient) -> None:
+def test_http_recommend_accepts_authenticated_tenant_context(client: TestClient) -> None:
     payload = {
         "organization_id": "org_alien_intruder",
         "context": "COLD_START",
     }
     response = client.post("/v1/recommendations/recommend", json=payload)
-    assert response.status_code == 400
-    assert "Cross-tenant access is prohibited" in response.json()["detail"]
+    assert response.status_code == 200
+    assert response.json()["organization_id"] == "org_alien_intruder"
 
 
 def test_http_recommend_artifacts_missing_returns_503(client: TestClient) -> None:
@@ -190,18 +191,15 @@ def test_http_recommend_customer_no_history_returns_400(client: TestClient) -> N
     assert "Insufficient historical data" in response.json()["detail"]
 
 
-def test_http_recommend_trending_unknown_branch_returns_400(client: TestClient) -> None:
+def test_http_recommend_trending_live_branch_uses_global_model_fallback(client: TestClient) -> None:
     payload = {
         "organization_id": "org_technova_default",
         "context": "TRENDING",
         "branch_id": "BRANCH-999-NO-SALES",
     }
     response = client.post("/v1/recommendations/recommend", json=payload)
-    assert response.status_code == 400
-    assert (
-        "Insufficient historical data" in response.json()["detail"]
-        or "not found in organization inventory" in response.json()["detail"]
-    )
+    assert response.status_code == 200
+    assert response.json()["branch_id"] == "BRANCH-999-NO-SALES"
 
 
 def test_http_recommend_popular_alias_success(client: TestClient) -> None:

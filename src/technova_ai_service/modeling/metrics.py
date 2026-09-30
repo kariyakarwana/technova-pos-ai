@@ -72,4 +72,3 @@ def calculate_forecasting_metrics(
         "wape": round(wape, 6),
         "mase": round(mase, 6) if not np.isnan(mase) else None,
     }
-

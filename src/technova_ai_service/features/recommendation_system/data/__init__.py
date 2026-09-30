@@ -13,13 +13,13 @@ from .inventory import build_inventory_lookup, load_inventory_dataframe
 from .transactions import ChronologicalSplitter, load_baskets_dataframe
 
 __all__ = [
-    "CatalogProduct",
     "COMPLEMENTARY_AFFINITY_RULES",
-    "build_generic_retail_catalog",
-    "load_catalog_dataframe",
+    "CatalogProduct",
     "ChronologicalSplitter",
+    "build_generic_retail_catalog",
+    "build_inventory_lookup",
     "load_baskets_dataframe",
+    "load_catalog_dataframe",
     "load_customers_dataframe",
     "load_inventory_dataframe",
-    "build_inventory_lookup",
 ]

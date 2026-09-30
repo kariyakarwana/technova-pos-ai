@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
 
 from .association import FPGrowthModel
 from .compatibility import CompatibilityEngine
@@ -56,8 +55,7 @@ class CandidateGenerationEngine:
         if self.compat is not None and query_products and weights.get("compatibility", 0) > 0:
             for q_id in query_products:
                 for cand_id, score in self.compat.find_compatible_products(q_id, top_k=15, exclude_ids=query_set):
-                    if score > candidate_signals[cand_id]["compatibility"]:
-                        candidate_signals[cand_id]["compatibility"] = score
+                    candidate_signals[cand_id]["compatibility"] = max(candidate_signals[cand_id]["compatibility"], score)
 
         # 3. Item & Content Similarity Signal
         if weights.get("similarity", 0) > 0 and query_products:
