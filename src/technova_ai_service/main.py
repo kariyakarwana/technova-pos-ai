@@ -44,25 +44,6 @@ async def lifespan(app: FastAPI):
     yield
 
 
-logger = logging.getLogger(__name__)
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Load model once at application startup / service initialization
-    try:
-        warmup_demand_model()
-        logger.info("Demand forecasting model loaded and cached at startup.")
-    except Exception as exc:
-        logger.warning("Demand forecasting model preload failed or deferred: %s", exc)
-    try:
-        warmup_recommendation_model()
-        logger.info("Recommendation model loaded and cached at startup.")
-    except Exception as exc:
-        logger.warning("Recommendation model preload failed or deferred: %s", exc)
-    yield
-
-
 app = FastAPI(
     title="TechNova AI Service",
     version="0.1.0",
