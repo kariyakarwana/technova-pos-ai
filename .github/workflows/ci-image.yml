@@ -39,7 +39,7 @@ jobs:
         run: uv sync --frozen
 
       - name: Ruff check
-        run: uv run ruff check .
+        run: uv run ruff check . --output-format=github
 
       - name: Test
         run: uv run pytest
