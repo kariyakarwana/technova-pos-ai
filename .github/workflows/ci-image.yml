@@ -59,13 +59,15 @@ jobs:
           fi
 
   publish:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.image_ref.outputs.image }}
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -91,5 +93,82 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Record immutable image reference
-        run: echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        id: image_ref
+        run: |
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+          image="${image,,}"
+          echo "$image" >> "$GITHUB_STEP_SUMMARY"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
 
+  deploy:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    concurrency:
+      group: technova-production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_BASE_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AI_IMAGE: ${{ needs.publish.outputs.image }}
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_USER: ${{ vars.VPS_USER }}
+    steps:
+      - name: Validate immutable image reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='^ghcr\.io/kariyakarwana/technova-pos-ai@sha256:[0-9a-f]{64}$'
+          if [[ ! "$AI_IMAGE" =~ $pattern ]]; then
+            echo "Invalid AI_IMAGE reference: $AI_IMAGE" >&2
+            exit 1
+          fi
+
+      - name: Connect runner to Tailscale
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: ${{ vars.VPS_HOST }}
+
+      - name: Prepare SSH identity
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/technova_deploy"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/technova_deploy" "$HOME/.ssh/known_hosts"
+
+      - name: Deploy AI service
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf -v remote_command \
+            'sudo /usr/local/sbin/technova-deploy --ai %q' \
+            "$AI_IMAGE"
+          ssh -i "$HOME/.ssh/technova_deploy" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$VPS_USER@$VPS_HOST" "$remote_command"
+
+      - name: External HTTPS smoke tests
+        if: ${{ vars.PUBLIC_BASE_URL != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            "${{ vars.PUBLIC_BASE_URL }}/nginx-health"
+          curl --fail --show-error --silent \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            "${{ vars.PUBLIC_BASE_URL }}/api/v1/health"
