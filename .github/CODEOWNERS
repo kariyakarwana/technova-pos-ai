@@ -4,3 +4,5 @@
 /uv.lock @kariyakarwana
 /pyproject.toml @kariyakarwana
 /scripts/ @kariyakarwana
+/deploy/ @kariyakarwana
+/VERSION @kariyakarwana
