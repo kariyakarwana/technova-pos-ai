@@ -12,7 +12,7 @@ on:
 
 concurrency:
   group: ai-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -34,6 +34,9 @@ jobs:
         with:
           version: "0.12.15"
           enable-cache: true
+
+      - name: Test deployment authorization
+        run: node --test deploy/check-release-owner.test.mjs
 
       - name: Install locked dependencies
         run: uv sync --frozen
@@ -58,14 +61,29 @@ jobs:
             exit "$status"
           fi
 
+  authorize:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Require owner's merge permission
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node deploy/check-release-owner.mjs
+
   publish:
-    if: github.event_name == 'push'
-    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, authorize]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.image_ref.outputs.image }}
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -91,5 +109,101 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Record immutable image reference
-        run: echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+        id: image_ref
+        run: |
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+          image="${image,,}"
+          echo "$image" >> "$GITHUB_STEP_SUMMARY"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
 
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: technova-production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_BASE_URL }}
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: read
+    env:
+      AI_IMAGE: ${{ needs.publish.outputs.image }}
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_USER: ${{ vars.VPS_USER }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Recheck owner and current main before accessing VPS
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node deploy/check-release-owner.mjs
+      - name: Require completed VPS setup
+        env:
+          READY: ${{ vars.VPS_DEPLOY_READY }}
+        run: |
+          test "$READY" = true || { echo 'Navod must complete the V1 VPS runbook before deployment.' >&2; exit 1; }
+          test -n "$VPS_HOST" && test -n "$VPS_USER"
+      - name: Validate immutable image reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='^ghcr\.io/kariyakarwana/technova-pos-ai@sha256:[0-9a-f]{64}$'
+          if [[ ! "$AI_IMAGE" =~ $pattern ]]; then
+            echo "Invalid AI_IMAGE reference: $AI_IMAGE" >&2
+            exit 1
+          fi
+
+      - name: Connect runner to Tailscale
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: ${{ vars.VPS_HOST }}
+
+      - name: Prepare SSH identity
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/technova_deploy"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 0600 "$HOME/.ssh/technova_deploy" "$HOME/.ssh/known_hosts"
+
+      - name: Deploy AI service
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf -v remote_command \
+            'test "$(sudo /usr/local/sbin/technova-deploy --version)" = "technova-deploy 1.0.0" && sudo /usr/local/sbin/technova-deploy --ai %q' \
+            "$AI_IMAGE"
+          ssh -i "$HOME/.ssh/technova_deploy" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
+            "$VPS_USER@$VPS_HOST" "$remote_command"
+
+
+  release:
+    needs: [publish, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Record version after successful production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_IMAGE: ${{ needs.publish.outputs.image }}
+        run: node deploy/record-release.mjs
